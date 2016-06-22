@@ -81,14 +81,14 @@ data {
 
 parameters {
     real<lower=0.0, upper=2.0 * pi()> mu[K];
-    real<lower=0.0> mu2;
-    real<lower=0.0> sigma2;
+    //real<lower=0.0> mu2;
+    //real<lower=0.0> sigma2;
     //simplex[K + 1] theta;
     //real<lower=0.0> kappa[K];
 }
 
 model {
-  real ps[K + 1];
+  real ps[K];
 
   // temp for log component densities
   //sigma ~ cauchy(0,2.5);
