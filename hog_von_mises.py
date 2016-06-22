@@ -83,7 +83,7 @@ parameters {
     real<lower=0.0, upper=2.0 * pi()> mu[K];
     real<lower=0.0> mu2;
     real<lower=0.0> sigma2;
-    simplex[K + 1] theta;
+    //simplex[K + 1] theta;
     //real<lower=0.0> kappa[K];
 }
 
@@ -102,7 +102,7 @@ model {
 
   for (n in 1:N) {
     for (k in 1:K) {
-        ps[k] <- log(theta[k]) + von_mises_log(y[n], mu[k], 1.0);//kappa[k]
+        ps[k] <- von_mises_log(y[n], mu[k], 1.0);//kappa[k]
     }
 
     //ps[K + 1] <- log(theta[K + 1]) + uniform_log(y[n], 0.0, 2.0 * pi());
