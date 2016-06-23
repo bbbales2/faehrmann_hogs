@@ -1,3 +1,4 @@
+#%%
 import pystan
 
 import matplotlib.pyplot as plt
@@ -70,57 +71,85 @@ seaborn.distplot(stats[idxs[:10000], 0])
 plt.show()
 seaborn.distplot(stats[idxs[:10000], 1])
 plt.show()
+
+idxs = numpy.argsort(stats[:, 1])[-2000:]
+
+seaborn.distplot(stats[idxs, 0])
+plt.show()
 #%%
 
 model_code = """
 data {
-    int<lower=1> K; //Number of Von Mises distributions to fit
-    int<lower=1> N;
-    real<lower=0.0> y[N];
+  int<lower=1> K; //Number of Von Mises distributions to fit
+  int<lower=1> N;
+  real<lower=0.0, upper=2.0 * pi()> y[N];
 }
 
 parameters {
-    real<lower=0.0, upper=2.0 * pi()> mu[K];
-    //real<lower=0.0> mu2;
-    //real<lower=0.0> sigma2;
-    //simplex[K + 1] theta;
-    //real<lower=0.0> kappa[K];
+  real<lower=0.0, upper=2.0 * pi()> mu[K];
+  simplex[K + 1] theta;
+  real<lower=0.0> kappa[K];
 }
 
 model {
-  real ps[K];
+  real ps[K + 1];
 
-  // temp for log component densities
-  //sigma ~ cauchy(0,2.5);
-  //for (k in 1:K) {
-  //   mu[k] ~ normal(0, 10);
-
-  //   for (l in 1:L) {
-  //       imu[l, k] ~ normal(mu[k], 0.5);
-  //   }
-  //}
+  for (k in 1:K) {
+    kappa[k] ~ normal(5.0, 10.0);
+  }
 
   for (n in 1:N) {
     for (k in 1:K) {
-        ps[k] <- von_mises_log(y[n], mu[k], 1.0);//kappa[k]
+      ps[k] <- log(theta[k]) + von_mises_log(y[n], mu[k], kappa[k]);
     }
 
-    //ps[K + 1] <- log(theta[K + 1]) + uniform_log(y[n], 0.0, 2.0 * pi());
+    ps[K + 1] <- log(theta[K + 1]) + uniform_log(y[n], 0.0, 2.0 * pi());
 
     increment_log_prob(log_sum_exp(ps));
   }
 }
 
+generated quantities {
+  real out;
+
+  {
+    int k;
+
+    k <- categorical_rng(theta);
+
+    if (k <= K)
+    {
+      out <- von_mises_rng(mu[k], kappa[k]);
+    }
+    else
+    {
+      out <- uniform_rng(0.0, 2.0 * pi());
+    }
+  }
+}
 """
 
 sm = pystan.StanModel(model_code = model_code)
 
 #%%
-N = 1000
-fit = sm.sampling(data = {
-    'K' : 1,
-    'N' : N,
-    'y' : stats[idxs[:N], 0]
-})
+N = 100
+idxs2 = range(len(idxs))
 
+random.shuffle(idxs2)
+seaborn.distplot(stats[idxs[idxs2[:N]], 0], bins = 20)
+plt.show()
+
+samples = stats[idxs[idxs2[:N]], 0]
+#%%
+
+fit = sm.sampling(data = {
+    'K' : 4,
+    'N' : N,
+    'y' : samples
+})
+#%%
 print fit
+
+plt.hist(fit.extract()['out'][2000:] % (2.0 * numpy.pi), normed = True, alpha = 0.5)
+plt.hist(samples, normed = True, alpha = 0.5)
+plt.show()
